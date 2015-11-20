@@ -24,7 +24,8 @@ unsigned char sbox[256] = {
 
 void __printblock(unsigned char *block) {
 	for(int i = 0; i < 16; i++) {
-		if(i%4 == 0) { printf("%c", '\n'); }
+		if(i%8 == 0) { printf("%s", "\n"); }
+		else if(i%4 == 0) { printf("%s", "\t"); }
 		printf("%x\t", block[i]);
 	}
 	printf("%c", '\n');
@@ -44,7 +45,15 @@ void getroundkey(unsigned char *full, unsigned char *piece, int which) {
 	memcpy(piece, full + which*16, 16);
 }
 
-void rotate(unsigned char *state) {
+void rotate(unsigned char *state0, unsigned char *state1, unsigned char *state2, unsigned char *state3) {
+	unsigned char temp = *state0;
+	*state0 = *state1;
+	*state1 = *state2;
+	*state2 = *state3;
+	*state3 = temp;
+}
+
+void rotate_word(unsigned char *state) {
 	unsigned char temp = state[0];
 	for(int i = 0; i < 3; i++) {
 		state[i] = state[i+1];
@@ -52,28 +61,49 @@ void rotate(unsigned char *state) {
 	state[3] = temp;
 }
 
-void subbytes(unsigned char *state) {
-	for(int i = 0; i < 4; i++) {
-		//state[i] = (state[i] << 4 ) | (state[i] >> 4);
-		state[i] = sbox[state[i]];
-	}
+void subbytes(unsigned char *state0, unsigned char *state1, unsigned char *state2, unsigned char *state3) {
+	*state0 = sbox[*state0];
+	*state1 = sbox[*state1];
+	*state2 = sbox[*state2];
+	*state3 = sbox[*state3];
 }
 
 void expandkey_core(unsigned char *word, int iteration) {
-	rotate(word);
-	subbytes(word);
+	rotate_word(word);
+	//subbytes(word);
 	word[0] = word[0] ^ rcon[iteration];
 }
 
 void expandkey(unsigned char *key, unsigned char *result) {
-	//first 2 bytes are easy
-	strcpy(result, key);
+	//copy the first 16 bytes
+	for(int i = 0; i < 16; i++) {
+		result[i] = key[i];
+	}
 
 	int rcon = 1;
 	unsigned char temp[4] = {0};
+	unsigned char * state;
 
-	for(int i = 0; i < 10; i++) {
+	for(int i = 1; i < 11; i++) {
+		//work on a 16 byte chunk at a time
+		//operate on 4 byte row at a time
+
+		//calc first four bytes
+		result[i*16 + 0] = result[i*16 - 4 + 0];
+		result[i*16 + 1] = result[i*16 - 4 + 1];
+		result[i*16 + 2] = result[i*16 - 4 + 2];
+		result[i*16 + 3] = result[i*16 - 4 + 3];
+		//rotate that shit
+		rotate(&result[i*16 + 0], &result[i*16 + 1], &result[i*16 + 2], &result[i*16 + 3]);
+
+
+
+	}
+
+
+	for(int i = 0; i < 176; i++) {
 		if(i%8 == 0) { printf("%c", '\n'); }
+		else if(i%4 == 0) { printf("%s", "\t"); }
 		printf("%x\t", result[i]);
 	}
 	printf("%c", '\n');
@@ -82,14 +112,12 @@ void expandkey(unsigned char *key, unsigned char *result) {
 void encryptablock(unsigned char *state, unsigned char *key) {
 	//__printblock(state);
 	//__printblock(key);
-	unsigned char expandedkey[176];
-	unsigned char roundkey[16];
+	unsigned char expandedkey[176] = {0};
+	unsigned char roundkey[16] = {0};
 	expandkey(key, expandedkey);
 
 	getroundkey(expandedkey, roundkey, 0);
-	//__printblock(roundkey);
-	addroundkey(state, roundkey);
-	//__printblock(state);
+	__printblock(roundkey);
 
 	for(int i = 1; i < 10; i++) {
 		//subbytes
@@ -114,12 +142,13 @@ int main() {
 
 	//encryptablock(state, key);
 
-	unsigned char word[4] = {0x8a, 0x84, 0xeb, 0x01};
-	for(int i = 0; i < 4; i++) {
-		word[i] = word[i] ^ rcon[i+1];
-	}
-
-	__printblock(word);
+	//unsigned char word[4] = {0x8a, 0x84, 0xeb, 0x01};
+	//for(int i = 0; i < 4; i++) {
+	//	word[i] = word[i] ^ rcon[i+1];
+	//}
+	//rotate(&word[0], &word[1], &word[2], &word[3]);
+	//rotate_word(word);
+	//__printblock(word);
 
 	printf("%c", '\n');
 	return 0;
