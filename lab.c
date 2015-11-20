@@ -53,25 +53,11 @@ void rotate(unsigned char *state0, unsigned char *state1, unsigned char *state2,
 	*state3 = temp;
 }
 
-void rotate_word(unsigned char *state) {
-	unsigned char temp = state[0];
-	for(int i = 0; i < 3; i++) {
-		state[i] = state[i+1];
-	}
-	state[3] = temp;
-}
-
 void subbytes(unsigned char *state0, unsigned char *state1, unsigned char *state2, unsigned char *state3) {
 	*state0 = sbox[*state0];
 	*state1 = sbox[*state1];
 	*state2 = sbox[*state2];
 	*state3 = sbox[*state3];
-}
-
-void expandkey_core(unsigned char *word, int iteration) {
-	rotate_word(word);
-	//subbytes(word);
-	word[0] = word[0] ^ rcon[iteration];
 }
 
 void expandkey(unsigned char *key, unsigned char *result) {
@@ -80,23 +66,31 @@ void expandkey(unsigned char *key, unsigned char *result) {
 		result[i] = key[i];
 	}
 
-	int rcon = 1;
-	unsigned char temp[4] = {0};
-	unsigned char * state;
-
+	//work on a 16 byte word at a time, 10 words
 	for(int i = 1; i < 11; i++) {
-		//work on a 16 byte chunk at a time
-		//operate on 4 byte row at a time
-
 		//calc first four bytes
 		result[i*16 + 0] = result[i*16 - 4 + 0];
 		result[i*16 + 1] = result[i*16 - 4 + 1];
 		result[i*16 + 2] = result[i*16 - 4 + 2];
 		result[i*16 + 3] = result[i*16 - 4 + 3];
-		//rotate that shit
+		//printf("copy: \t%x\t%x\t%x\t%x\t\n", result[i*16+0], result[i*16+1], result[i*16+2], result[i*16+3]);
 		rotate(&result[i*16 + 0], &result[i*16 + 1], &result[i*16 + 2], &result[i*16 + 3]);
+		//printf("rot: \t%x\t%x\t%x\t%x\t\n", result[i*16+0], result[i*16+1], result[i*16+2], result[i*16+3]);
+		subbytes(&result[i*16 + 0], &result[i*16 + 1], &result[i*16 + 2], &result[i*16 + 3]);
+		//printf("sub: \t%x\t%x\t%x\t%x\t\n", result[i*16+0], result[i*16+1], result[i*16+2], result[i*16+3]);
+		//printf("xor: \t%x\t%x\t%x\t%x\n", result[i*16 + 0], result[i*16 - 16 + 0], rcon[i], result[i*16 + 0] ^ result[i*16 - 16 + 0] ^ rcon[i]);
+		//xor this + first 4 bytes of last block
+		result[i*16 + 0] ^= result[i*16 - 16 + 0] ^ rcon[i];
+		result[i*16 + 1] ^= result[i*16 - 16 + 1];
+		result[i*16 + 2] ^= result[i*16 - 16 + 2];
+		result[i*16 + 3] ^= result[i*16 - 16 + 3];
 
-
+		//calc next 12 bytes
+		//xor this + last 12 bytes of last block
+		for(int j = 0; j < 12; j++) {
+			//printf("xor: \t%x\t%x\t%x\n", result[i*16 + j], result[i*16 - 12 + j], result[i*16 + j] ^ result[i*16 - 12 + j]);
+			result[i*16 + 4 + j] = result[i*16 + j] ^ result[i*16 - 12 + j];
+		}
 
 	}
 
@@ -114,6 +108,7 @@ void encryptablock(unsigned char *state, unsigned char *key) {
 	//__printblock(key);
 	unsigned char expandedkey[176] = {0};
 	unsigned char roundkey[16] = {0};
+	__printblock(key);
 	expandkey(key, expandedkey);
 
 	getroundkey(expandedkey, roundkey, 0);
@@ -138,16 +133,16 @@ int main() {
 
 	unsigned char state[16] = {'\x04','\xe0','\x48','\x28','\x66','\xcb','\xf8','\x06','\x81','\x19','\xd3','\x26','\xe5','\x9a','\x7a','\x4c'};
 	//unsigned char key[] = "abcdefhijklmnop";
-	unsigned char key[16] = {'\xa0','\x88','\x23','\x2a','\xfa','\x54','\xa3','\x6c','\xfe','\x2c','\x39','\x76','\x17','\xb1','\x39','\x05'};
+	//unsigned char key[16] = {'\xa0','\x88','\x23','\x2a','\xfa','\x54','\xa3','\x6c','\xfe','\x2c','\x39','\x76','\x17','\xb1','\x39','\x05'};
+	unsigned char key[16] = {'\x2b','\x7e','\x15','\x16','\x28','\xae','\xd2','\xa6','\xab','\xf7','\x15','\x88','\x09','\xcf','\x4f','\x3c'};
 
-	//encryptablock(state, key);
+	encryptablock(state, key);
 
 	//unsigned char word[4] = {0x8a, 0x84, 0xeb, 0x01};
 	//for(int i = 0; i < 4; i++) {
 	//	word[i] = word[i] ^ rcon[i+1];
 	//}
 	//rotate(&word[0], &word[1], &word[2], &word[3]);
-	//rotate_word(word);
 	//__printblock(word);
 
 	printf("%c", '\n');
