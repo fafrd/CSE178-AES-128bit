@@ -1,4 +1,3 @@
-# UC Merced CSE 178 Project
-## Implementation of AES 128bit encryption in C
+# Implementation of AES 128bit encryption in C
 
-Compile with -std=c99 so gcc doesn't get angry at you
+CSE 178 Computer and Network Security project. Not very efficient. Compile with -std=c99 so gcc doesn't get angry at you
