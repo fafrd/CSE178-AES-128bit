@@ -60,13 +60,17 @@ void subbytes(unsigned char *state0, unsigned char *state1, unsigned char *state
 	*state3 = sbox[*state3];
 }
 
+void mixcolumns(unsigned char *state0, unsigned char *state1, unsigned char *state2, unsigned char *state3) {
+
+}
+
 void expandkey(unsigned char *key, unsigned char *result) {
 	//copy the first 16 bytes
 	for(int i = 0; i < 16; i++) {
 		result[i] = key[i];
 	}
 
-	//work on a 16 byte word at a time, 10 words
+	//work on a 16 bytes at a time
 	for(int i = 1; i < 11; i++) {
 		//calc first four bytes
 		result[i*16 + 0] = result[i*16 - 4 + 0];
@@ -94,13 +98,12 @@ void expandkey(unsigned char *key, unsigned char *result) {
 
 	}
 
-
-	for(int i = 0; i < 176; i++) {
-		if(i%8 == 0) { printf("%c", '\n'); }
-		else if(i%4 == 0) { printf("%s", "\t"); }
-		printf("%x\t", result[i]);
-	}
-	printf("%c", '\n');
+	//for(int i = 0; i < 176; i++) {
+	//	if(i%8 == 0) { printf("%c", '\n'); }
+	//	else if(i%4 == 0) { printf("%s", "\t"); }
+	//	printf("%x\t", result[i]);
+	//}
+	//printf("%c", '\n');
 }
 
 void encryptablock(unsigned char *state, unsigned char *key) {
@@ -108,24 +111,40 @@ void encryptablock(unsigned char *state, unsigned char *key) {
 	//__printblock(key);
 	unsigned char expandedkey[176] = {0};
 	unsigned char roundkey[16] = {0};
-	__printblock(key);
 	expandkey(key, expandedkey);
 
 	getroundkey(expandedkey, roundkey, 0);
 	__printblock(roundkey);
 
 	for(int i = 1; i < 10; i++) {
-		//subbytes
-		//shiftrows
+		subbytes(&state[0], &state[1], &state[2], &state[3]);
+		subbytes(&state[4], &state[5], &state[6], &state[7]);
+		subbytes(&state[8], &state[9], &state[10], &state[11]);
+		subbytes(&state[12], &state[13], &state[14], &state[15]);
+
+		rotate(&state[0], &state[1], &state[2], &state[3]);
+		rotate(&state[4], &state[5], &state[6], &state[7]);
+		rotate(&state[8], &state[9], &state[10], &state[11]);
+		rotate(&state[12], &state[13], &state[14], &state[15]);
+
 		//mixcolumns
+
 		getroundkey(expandedkey, roundkey, i);
 		addroundkey(state, roundkey);
 	}
 
-	//subbytes
-	//shiftrows
-	//getroundkey(expandedkey, roundkey, 11);
-	//addroundkey(state, roundkey);
+	subbytes(&state[0], &state[1], &state[2], &state[3]);
+	subbytes(&state[4], &state[5], &state[6], &state[7]);
+	subbytes(&state[8], &state[9], &state[10], &state[11]);
+	subbytes(&state[12], &state[13], &state[14], &state[15]);
+
+	rotate(&state[0], &state[1], &state[2], &state[3]);
+	rotate(&state[4], &state[5], &state[6], &state[7]);
+	rotate(&state[8], &state[9], &state[10], &state[11]);
+	rotate(&state[12], &state[13], &state[14], &state[15]);
+
+	getroundkey(expandedkey, roundkey, 11);
+	addroundkey(state, roundkey);
 }
 
 int main() {
@@ -152,9 +171,9 @@ int main() {
 /*
 
 http://www.formaestudio.com/rijndaelinspector/archivos/Rijndael_Animation_v4_eng.swf
-http://www.samiam.org/key-schedule.html
 
-
-
+http://www.angelfire.com/biz7/atleast/mix_columns.pdf
+https://en.wikipedia.org/wiki/Rijndael_mix_columns
+http://www.samiam.org/mix-column.html
 
 */
