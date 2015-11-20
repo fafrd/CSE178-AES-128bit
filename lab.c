@@ -53,6 +53,17 @@ void rotate(unsigned char *state0, unsigned char *state1, unsigned char *state2,
 	*state3 = temp;
 }
 
+void rotate_word(unsigned char *word) {
+	rotate(&word[1], &word[5], &word[9], &word[13]);
+
+	rotate(&word[2], &word[6], &word[10], &word[14]);
+	rotate(&word[2], &word[6], &word[10], &word[14]);
+
+	rotate(&word[3], &word[7], &word[11], &word[15]);
+	rotate(&word[3], &word[7], &word[11], &word[15]);
+	rotate(&word[3], &word[7], &word[11], &word[15]);
+}
+
 void subbytes(unsigned char *state0, unsigned char *state1, unsigned char *state2, unsigned char *state3) {
 	*state0 = sbox[*state0];
 	*state1 = sbox[*state1];
@@ -60,8 +71,30 @@ void subbytes(unsigned char *state0, unsigned char *state1, unsigned char *state
 	*state3 = sbox[*state3];
 }
 
-void mixcolumns(unsigned char *state0, unsigned char *state1, unsigned char *state2, unsigned char *state3) {
+unsigned char galois_multiply(unsigned char a, unsigned char b) {
+	unsigned char result = 0;
+	unsigned char high_bit_set = 0;
 
+	for(int i = 0; i < 8; i++) {
+		if(b & 1)
+			result ^= a;
+		high_bit_set = (a & 0x80);
+		a <<= 1;
+		if(high_bit_set == 0x80)
+			a ^= 0x1b;
+		b >>= 1;
+	}
+
+	return result;
+}
+
+void mixcolumns(unsigned char *state0, unsigned char *state1, unsigned char *state2, unsigned char *state3) {
+	unsigned char temp[4] = {*state0, *state1, *state2, *state3};
+
+	*state0 = galois_multiply(temp[0], 2) ^ galois_multiply(temp[3], 1) ^ galois_multiply(temp[2], 1) ^ galois_multiply(temp[1], 3);
+	*state1 = galois_multiply(temp[1], 2) ^ galois_multiply(temp[0], 1) ^ galois_multiply(temp[3], 1) ^ galois_multiply(temp[2], 3);
+	*state2 = galois_multiply(temp[2], 2) ^ galois_multiply(temp[1], 1) ^ galois_multiply(temp[0], 1) ^ galois_multiply(temp[3], 3);
+	*state3 = galois_multiply(temp[3], 2) ^ galois_multiply(temp[2], 1) ^ galois_multiply(temp[1], 1) ^ galois_multiply(temp[0], 3);
 }
 
 void expandkey(unsigned char *key, unsigned char *result) {
@@ -114,22 +147,33 @@ void encryptablock(unsigned char *state, unsigned char *key) {
 	expandkey(key, expandedkey);
 
 	getroundkey(expandedkey, roundkey, 0);
-	__printblock(roundkey);
+	addroundkey(state, roundkey);
 
 	for(int i = 1; i < 10; i++) {
+		//printf("\n%s%d", "state at start of round ", i);
+		//__printblock(state);
+
 		subbytes(&state[0], &state[1], &state[2], &state[3]);
 		subbytes(&state[4], &state[5], &state[6], &state[7]);
 		subbytes(&state[8], &state[9], &state[10], &state[11]);
 		subbytes(&state[12], &state[13], &state[14], &state[15]);
+		//printf("\n%s%d", "after subbytes, round ", i);
+		//__printblock(state);
 
-		rotate(&state[0], &state[1], &state[2], &state[3]);
-		rotate(&state[4], &state[5], &state[6], &state[7]);
-		rotate(&state[8], &state[9], &state[10], &state[11]);
-		rotate(&state[12], &state[13], &state[14], &state[15]);
+		rotate_word(state);
+		//printf("\n%s%d", "after rotate, round ", i);
+		//__printblock(roundkey);
 
-		//mixcolumns
+		mixcolumns(&state[0], &state[1], &state[2], &state[3]);
+		mixcolumns(&state[4], &state[5], &state[6], &state[7]);
+		mixcolumns(&state[8], &state[9], &state[10], &state[11]);
+		mixcolumns(&state[12], &state[13], &state[14], &state[15]);
+		//printf("\n%s%d", "after mixcolumns, round ", i);
+		//__printblock(roundkey);
 
 		getroundkey(expandedkey, roundkey, i);
+		//printf("\n%s%d", "Round key ", i);
+		//__printblock(roundkey);
 		addroundkey(state, roundkey);
 	}
 
@@ -138,31 +182,29 @@ void encryptablock(unsigned char *state, unsigned char *key) {
 	subbytes(&state[8], &state[9], &state[10], &state[11]);
 	subbytes(&state[12], &state[13], &state[14], &state[15]);
 
-	rotate(&state[0], &state[1], &state[2], &state[3]);
-	rotate(&state[4], &state[5], &state[6], &state[7]);
-	rotate(&state[8], &state[9], &state[10], &state[11]);
-	rotate(&state[12], &state[13], &state[14], &state[15]);
+	rotate_word(state);
 
-	getroundkey(expandedkey, roundkey, 11);
+	getroundkey(expandedkey, roundkey, 10);
 	addroundkey(state, roundkey);
 }
 
 int main() {
 	printf("CSE 178 AES Implementation\n\n");
 
-	unsigned char state[16] = {'\x04','\xe0','\x48','\x28','\x66','\xcb','\xf8','\x06','\x81','\x19','\xd3','\x26','\xe5','\x9a','\x7a','\x4c'};
+	unsigned char state[16] = {'\x32','\x43','\xf6','\xa8','\x88','\x5a','\x30','\x8d','\x31','\x31','\x98','\xa2','\xe0','\x37','\x07','\x34'};
 	//unsigned char key[] = "abcdefhijklmnop";
 	//unsigned char key[16] = {'\xa0','\x88','\x23','\x2a','\xfa','\x54','\xa3','\x6c','\xfe','\x2c','\x39','\x76','\x17','\xb1','\x39','\x05'};
 	unsigned char key[16] = {'\x2b','\x7e','\x15','\x16','\x28','\xae','\xd2','\xa6','\xab','\xf7','\x15','\x88','\x09','\xcf','\x4f','\x3c'};
 
+	printf("Input is: ");
+	__printblock(state);
+	printf("Key is: ");
+	__printblock(key);
+
 	encryptablock(state, key);
 
-	//unsigned char word[4] = {0x8a, 0x84, 0xeb, 0x01};
-	//for(int i = 0; i < 4; i++) {
-	//	word[i] = word[i] ^ rcon[i+1];
-	//}
-	//rotate(&word[0], &word[1], &word[2], &word[3]);
-	//__printblock(word);
+	printf("Output: ");
+	__printblock(state);
 
 	printf("%c", '\n');
 	return 0;
