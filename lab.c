@@ -188,34 +188,34 @@ void encryptablock(unsigned char *state, unsigned char *key) {
 	addroundkey(state, roundkey);
 }
 
-int main() {
+int main(int argc, char *argv[]) {
 	printf("CSE 178 AES Implementation\n\n");
 
-	unsigned char state[16] = {'\x32','\x43','\xf6','\xa8','\x88','\x5a','\x30','\x8d','\x31','\x31','\x98','\xa2','\xe0','\x37','\x07','\x34'};
-	//unsigned char key[] = "abcdefhijklmnop";
-	//unsigned char key[16] = {'\xa0','\x88','\x23','\x2a','\xfa','\x54','\xa3','\x6c','\xfe','\x2c','\x39','\x76','\x17','\xb1','\x39','\x05'};
-	unsigned char key[16] = {'\x2b','\x7e','\x15','\x16','\x28','\xae','\xd2','\xa6','\xab','\xf7','\x15','\x88','\x09','\xcf','\x4f','\x3c'};
+	unsigned char input_1[16] = {'\x32','\x43','\xf6','\xa8','\x88','\x5a','\x30','\x8d','\x31','\x31','\x98','\xa2','\xe0','\x37','\x07','\x34'};
+	unsigned char key_1[16] = {'\x2b','\x7e','\x15','\x16','\x28','\xae','\xd2','\xa6','\xab','\xf7','\x15','\x88','\x09','\xcf','\x4f','\x3c'};
 
 	printf("Input is: ");
-	__printblock(state);
+	__printblock(input_1);
 	printf("Key is: ");
-	__printblock(key);
-
-	encryptablock(state, key);
-
+	__printblock(key_1);
+	encryptablock(input_1, key_1);
 	printf("Output: ");
-	__printblock(state);
+	__printblock(input_1);
+	//printf("Output in base64: %s", base64(input_1));
+
+	unsigned char input_2[16] = {"abcdefghijklmno"};
+	unsigned char key_2[16] = {"passwordpassword"};
+
+	printf("Input is: ");
+	__printblock(input_2);
+	printf("Key is: ");
+	__printblock(key_2);
+	encryptablock(input_2, key_2);
+	printf("Output: ");
+	__printblock(input_2);
+	//printf("Output in base64: %s", input_2);
+
 
 	printf("%c", '\n');
 	return 0;
 }
-
-/*
-
-http://www.formaestudio.com/rijndaelinspector/archivos/Rijndael_Animation_v4_eng.swf
-
-http://www.angelfire.com/biz7/atleast/mix_columns.pdf
-https://en.wikipedia.org/wiki/Rijndael_mix_columns
-http://www.samiam.org/mix-column.html
-
-*/
